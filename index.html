@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HydroMatch: Tebak Jenis Hidrolisis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f8ff;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #4682b4;
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .game-section {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .salt-container, .property-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .salt-card, .property-card {
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .salt-card {
+            background-color: #e6f7ff;
+            border: 2px solid #91d5ff;
+        }
+        .property-card {
+            background-color: #fff7e6;
+            border: 2px solid #ffd591;
+        }
+        .salt-card.selected {
+            background-color: #91d5ff;
+            transform: scale(1.05);
+        }
+        .property-card.selected {
+            background-color: #ffd591;
+            transform: scale(1.05);
+        }
+        .salt-card.matched, .property-card.matched {
+            background-color: #d9f7be;
+            border-color: #95de64;
+            cursor: default;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4682b4;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #36648b;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .score-display {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .message {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .message.correct {
+            background-color: #d9f7be;
+            color: #52c41a;
+        }
+        .message.incorrect {
+            background-color: #fff1f0;
+            color: #ff4d4f;
+        }
+        .explanation {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #4682b4;
+        }
+        .theory-section {
+            margin-top: 20px;
+        }
+        .hide {
+            display: none;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .results-table th, .results-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .results-table th {
+            background-color: #4682b4;
+            color: white;
+        }
+        .results-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>HydroMatch: Tebak Jenis Hidrolisis</h1>
+        <p>Cocokkan garam dengan sifat hidrolisisnya (asam, basa, atau netral)</p>
+    </div>
+
+    <div class="game-container">
+        <div class="game-section">
+            <div class="score-display">Skor: <span id="score">0</span> / <span id="total-pairs">5</span></div>
+            <div id="message" class="message hide"></div>
+            <div id="explanation" class="explanation hide"></div>
+            
+            <div class="game-board">
+                <div class="salt-container" id="salt-container">
+                    <!-- Salt cards will be generated here -->
+                </div>
+                <div class="property-container" id="property-container">
+                    <!-- Property cards will be generated here -->
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="check-btn" disabled>Periksa Jawaban</button>
+                <button id="next-btn" disabled>Soal Berikutnya</button>
+                <button id="show-theory-btn">Lihat Teori</button>
+            </div>
+        </div>
+
+        <div class="game-section theory-section hide" id="theory-section">
+            <h2>Teori Hidrolisis Garam</h2>
+            <p>Hidrolisis garam adalah reaksi antara anion atau kation garam dengan air. Berdasarkan jenis asam dan basa pembentuknya, sifat garam dapat dikategorikan menjadi:</p>
+            
+            <h3>1. Garam Bersifat Netral</h3>
+            <p>Garam yang berasal dari asam kuat dan basa kuat. Contoh: NaCl, KNO₃, Na₂SO₄</p>
+            <p>Kation dan anion pada garam ini tidak mengalami hidrolisis karena berasal dari asam kuat dan basa kuat, sehingga pH = 7.</p>
+            
+            <h3>2. Garam Bersifat Asam</h3>
+            <p>Garam yang berasal dari asam kuat dan basa lemah. Contoh: NH₄Cl, AlCl₃, Fe₂(SO₄)₃</p>
+            <p>Kation dari basa lemah (seperti NH₄⁺) mengalami hidrolisis dan menghasilkan ion H⁺, sehingga pH < 7.</p>
+            
+            <h3>3. Garam Bersifat Basa</h3>
+            <p>Garam yang berasal dari asam lemah dan basa kuat. Contoh: CH₃COONa, Na₂CO₃, KCN</p>
+            <p>Anion dari asam lemah (seperti CH₃COO⁻) mengalami hidrolisis dan menghasilkan ion OH⁻, sehingga pH > 7.</p>
+            
+            <h3>4. Garam Bersifat Asam/Basa (Tergantung Ka dan Kb)</h3>
+            <p>Garam yang berasal dari asam lemah dan basa lemah. Contoh: NH₄CH₃COO, NH₄CN</p>
+            <p>Kation dan anion keduanya mengalami hidrolisis. Sifat garam tergantung pada nilai Ka (asam) dan Kb (basa):</p>
+            <ul>
+                <li>Jika Ka > Kb, garam bersifat asam (pH < 7)</li>
+                <li>Jika Ka < Kb, garam bersifat basa (pH > 7)</li>
+                <li>Jika Ka = Kb, garam bersifat netral (pH = 7)</li>
+            </ul>
+            
+            <button id="close-theory-btn">Tutup Teori</button>
+        </div>
+    </div>
+
+    <div id="results-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="close-modal">&times;</span>
+            <h2>Hasil Game Hidrolisis Garam</h2>
+            <p>Skor akhir: <span id="final-score">0</span> / <span id="final-total">5</span></p>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Garam</th>
+                        <th>Sifat Hidrolisis</th>
+                        <th>Jawaban Anda</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="results-table-body">
+                    <!-- Results will be inserted here -->
+                </tbody>
+            </table>
+            <button id="play-again-btn" style="margin-top: 20px;">Main Lagi</button>
+        </div>
+    </div>
+
+    <script>
+        const saltData = [
+            { name: "NaCl (Natrium klorida)", property: "Netral", explanation: "NaCl berasal dari asam kuat (HCl) dan basa kuat (NaOH). Baik ion Na⁺ maupun Cl⁻ tidak mengalami hidrolisis sehingga larutan bersifat netral (pH = 7)." },
+            { name: "CH₃COONa (Natrium asetat)", property: "Basa", explanation: "CH₃COONa berasal dari asam lemah (CH₃COOH) dan basa kuat (NaOH). Ion CH₃COO⁻ mengalami hidrolisis menghasilkan ion OH⁻, sehingga larutan bersifat basa (pH > 7)." },
+            { name: "NH₄Cl (Amonium klorida)", property: "Asam", explanation: "NH₄Cl berasal dari asam kuat (HCl) dan basa lemah (NH₄OH). Ion NH₄⁺ mengalami hidrolisis menghasilkan ion H⁺, sehingga larutan bersifat asam (pH < 7)." },
+            { name: "Na₂SO₄ (Natrium sulfat)", property: "Netral", explanation: "Na₂SO₄ berasal dari asam kuat (H₂SO₄) dan basa kuat (NaOH). Baik ion Na⁺ maupun SO₄²⁻ tidak mengalami hidrolisis sehingga larutan bersifat netral (pH = 7)." },
+            { name: "KCN (Kalium sianida)", property: "Basa", explanation: "KCN berasal dari asam lemah (HCN) dan basa kuat (KOH). Ion CN⁻ mengalami hidrolisis menghasilkan ion OH⁻, sehingga larutan bersifat basa (pH > 7)." },
+            { name: "Al(NO₃)₃ (Aluminium nitrat)", property: "Asam", explanation: "Al(NO₃)₃ berasal dari asam kuat (HNO₃) dan basa lemah (Al(OH)₃). Ion Al³⁺ mengalami hidrolisis menghasilkan ion H⁺, sehingga larutan bersifat asam (pH < 7)." },
+            { name: "Na₂CO₃ (Natrium karbonat)", property: "Basa", explanation: "Na₂CO₃ berasal dari asam lemah (H₂CO₃) dan basa kuat (NaOH). Ion CO₃²⁻ mengalami hidrolisis menghasilkan ion OH⁻, sehingga larutan bersifat basa (pH > 7)." },
+            { name: "NH₄CH₃COO (Amonium asetat)", property: "Netral", explanation: "NH₄CH₃COO berasal dari asam lemah (CH₃COOH) dan basa lemah (NH₄OH) dengan Ka dan Kb yang hampir sama. Kation NH₄⁺ dan anion CH₃COO⁻ keduanya mengalami hidrolisis, tapi efeknya saling meniadakan sehingga larutan bersifat netral (pH ≈ 7)." },
+            { name: "FeCl₃ (Besi(III) klorida)", property: "Asam", explanation: "FeCl₃ berasal dari asam kuat (HCl) dan basa lemah (Fe(OH)₃). Ion Fe³⁺ mengalami hidrolisis menghasilkan ion H⁺, sehingga larutan bersifat asam (pH < 7)." },
+            { name: "K₂SO₃ (Kalium sulfit)", property: "Basa", explanation: "K₂SO₃ berasal dari asam lemah (H₂SO₃) dan basa kuat (KOH). Ion SO₃²⁻ mengalami hidrolisis menghasilkan ion OH⁻, sehingga larutan bersifat basa (pH > 7)." }
+        ];
+
+        // Game state variables
+        let currentRound = 0;
+        let score = 0;
+        let maxRounds = 5;
+        let currentSalts = [];
+        let currentProperties = [];
+        let selectedSalt = null;
+        let selectedProperty = null;
+        let answeredPairs = [];
+        let gameHistory = [];
+
+        // DOM elements
+        const saltContainer = document.getElementById('salt-container');
+        const propertyContainer = document.getElementById('property-container');
+        const checkBtn = document.getElementById('check-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const scoreDisplay = document.getElementById('score');
+        const totalPairsDisplay = document.getElementById('total-pairs');
+        const messageElement = document.getElementById('message');
+        const explanationElement = document.getElementById('explanation');
+        const showTheoryBtn = document.getElementById('show-theory-btn');
+        const closeTheoryBtn = document.getElementById('close-theory-btn');
+        const theorySection = document.getElementById('theory-section');
+        const resultsModal = document.getElementById('results-modal');
+        const closeModal = document.getElementById('close-modal');
+        const playAgainBtn = document.getElementById('play-again-btn');
+        const finalScore = document.getElementById('final-score');
+        const finalTotal = document.getElementById('final-total');
+        const resultsTableBody = document.getElementById('results-table-body');
+
+        // Initialize the game
+        function initGame() {
+            currentRound = 0;
+            score = 0;
+            gameHistory = [];
+            totalPairsDisplay.textContent = maxRounds;
+            scoreDisplay.textContent = score;
+            startNewRound();
+        }
+
+        // Start a new round
+        function startNewRound() {
+            // Clear selections
+            selectedSalt = null;
+            selectedProperty = null;
+            
+            // Clear containers
+            saltContainer.innerHTML = '';
+            propertyContainer.innerHTML = '';
+            messageElement.className = 'message hide';
+            explanationElement.className = 'explanation hide';
+            
+            // Disable buttons
+            checkBtn.disabled = true;
+            nextBtn.disabled = true;
+            
+            // Get 5 random salts for this round
+            const shuffledSalts = [...saltData].sort(() => Math.random() - 0.5);
+            currentSalts = shuffledSalts.slice(0, 5);
+            
+            // Create unique properties list
+            const uniqueProperties = ['Asam', 'Basa', 'Netral'];
+            currentProperties = uniqueProperties;
+            
+            // Render salt cards
+            currentSalts.forEach((salt, index) => {
+                const saltCard = document.createElement('div');
+                saltCard.className = 'salt-card';
+                saltCard.textContent = salt.name;
+                saltCard.dataset.index = index;
+                saltCard.addEventListener('click', () => selectSalt(saltCard, index));
+                saltContainer.appendChild(saltCard);
+            });
+            
+            // Render property cards
+            currentProperties.forEach((property, index) => {
+                const propertyCard = document.createElement('div');
+                propertyCard.className = 'property-card';
+                propertyCard.textContent = property;
+                propertyCard.dataset.property = property;
+                propertyCard.addEventListener('click', () => selectProperty(propertyCard, property));
+                propertyContainer.appendChild(propertyCard);
+            });
+            
+            currentRound++;
+        }
+
+        // Select a salt card
+        function selectSalt(card, index) {
+            // Deselect previously selected salt
+            const selectedCards = document.querySelectorAll('.salt-card.selected');
+            selectedCards.forEach(c => c.classList.remove('selected'));
+            
+            // Select new salt
+            card.classList.add('selected');
+            selectedSalt = index;
+            
+            // Enable check button if both salt and property are selected
+            checkBtn.disabled = !(selectedSalt !== null && selectedProperty !== null);
+        }
+
+        // Select a property card
+        function selectProperty(card, property) {
+            // Deselect previously selected property
+            const selectedCards = document.querySelectorAll('.property-card.selected');
+            selectedCards.forEach(c => c.classList.remove('selected'));
+            
+            // Select new property
+            card.classList.add('selected');
+            selectedProperty = property;
+            
+            // Enable check button if both salt and property are selected
+            checkBtn.disabled = !(selectedSalt !== null && selectedProperty !== null);
+        }
+
+        // Check the answer
+        function checkAnswer() {
+            const selectedSaltData = currentSalts[selectedSalt];
+            const correctProperty = selectedSaltData.property;
+            const isCorrect = selectedProperty === correctProperty;
+            
+            // Update score
+            if (isCorrect) {
+                score++;
+                scoreDisplay.textContent = score;
+                messageElement.textContent = 'Benar! 👍';
+                messageElement.className = 'message correct';
+            } else {
+                messageElement.textContent = `Salah! Sifat yang benar dari ${selectedSaltData.name} adalah ${correctProperty}.`;
+                messageElement.className = 'message incorrect';
+            }
+            
+            // Show explanation
+            explanationElement.textContent = selectedSaltData.explanation;
+            explanationElement.className = 'explanation';
+            
+            // Mark cards as matched
+            const saltCard = document.querySelector(`.salt-card[data-index="${selectedSalt}"]`);
+            saltCard.classList.add('matched');
+            
+            // Record the answer
+            answeredPairs.push({
+                salt: selectedSaltData.name,
+                correctProperty: correctProperty,
+                userAnswer: selectedProperty,
+                isCorrect: isCorrect
+            });
+            
+            // Add to game history
+            gameHistory.push({
+                salt: selectedSaltData.name,
+                correctProperty: correctProperty,
+                userAnswer: selectedProperty,
+                isCorrect: isCorrect
+            });
+            
+            // Disable check button and enable next button
+            checkBtn.disabled = true;
+            nextBtn.disabled = false;
+            
+            // Reset selections
+            selectedSalt = null;
+            selectedProperty = null;
+        }
+
+        // Move to next salt or end game
+        function nextSalt() {
+            if (answeredPairs.length >= 5) {
+                endGame();
+            } else {
+                startNewRound();
+            }
+        }
+
+        // End the game and show results
+        function endGame() {
+            finalScore.textContent = score;
+            finalTotal.textContent = maxRounds;
+            
+            // Clear previous results
+            resultsTableBody.innerHTML = '';
+            
+            // Add results to table
+            gameHistory.forEach(result => {
+                const row = document.createElement('tr');
+                
+                const saltCell = document.createElement('td');
+                saltCell.textContent = result.salt;
+                row.appendChild(saltCell);
+                
+                const propertyCell = document.createElement('td');
+                propertyCell.textContent = result.correctProperty;
+                row.appendChild(propertyCell);
+                
+                const userAnswerCell = document.createElement('td');
+                userAnswerCell.textContent = result.userAnswer;
+                row.appendChild(userAnswerCell);
+                
+                const statusCell = document.createElement('td');
+                statusCell.textContent = result.isCorrect ? '✓ Benar' : '✗ Salah';
+                statusCell.style.color = result.isCorrect ? 'green' : 'red';
+                row.appendChild(statusCell);
+                
+                resultsTableBody.appendChild(row);
+            });
+            
+            // Show modal
+            resultsModal.style.display = 'block';
+        }
+
+        // Reset and play again
+        function playAgain() {
+            resultsModal.style.display = 'none';
+            answeredPairs = [];
+            initGame();
+        }
+
+        // Event listeners
+        checkBtn.addEventListener('click', checkAnswer);
+        nextBtn.addEventListener('click', nextSalt);
+        showTheoryBtn.addEventListener('click', () => theorySection.classList.remove('hide'));
+        closeTheoryBtn.addEventListener('click', () => theorySection.classList.add('hide'));
+        closeModal.addEventListener('click', () => resultsModal.style.display = 'none');
+        playAgainBtn.addEventListener('click', playAgain);
+
+        // Initialize the game
+        initGame();
+    </script>
+</body>
+</html>
